@@ -113,6 +113,8 @@ public:
     void abs_spi_cs_pin_init();
     uint16_t abs_spi_dma_tx_[1] = {0xFFFF};
     uint16_t abs_spi_dma_rx_[1];
+    uint16_t orb_spi_dma_tx_[2] = {0x0000, 0x0000}; /**< tx frame for Orbis encoder communication (Position request) */
+    uint16_t orb_spi_dma_rx_[2];                    /**< rx frame for Orbis encoder communication (Position response - 16 bit MT+ n bit ST+ 2 bitEW) */
     bool abs_spi_pos_updated_ = false;
     Mode_t mode_ = MODE_INCREMENTAL;
     GPIO_TypeDef* abs_spi_cs_port_;
