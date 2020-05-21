@@ -109,6 +109,7 @@ public:
 
     bool abs_spi_init();
     bool abs_spi_start_transaction();
+    bool orb_spi_start_transaction();
     void abs_spi_cb();
     void abs_spi_cs_pin_init();
     uint16_t abs_spi_dma_tx_[1] = {0xFFFF};
