@@ -311,7 +311,7 @@ void Encoder::sample_now() {
         case MODE_SPI_ABS_AMS:
         case MODE_SPI_ABS_CUI:
         case MODE_SPI_ABS_AEAT:
-        {
+        case MODE_SPI_ABS_ORB: {
             axis_->motor_.log_timing(Motor::TIMING_LOG_SAMPLE_NOW);
             // Do nothing
         } break;
@@ -367,15 +367,15 @@ bool Encoder::orb_spi_start_transaction(){
             return false;
         }
         HAL_GPIO_WritePin(abs_spi_cs_port_, abs_spi_cs_pin_, GPIO_PIN_RESET);
-
+        
         /** TODO: Implement delay_us*/
         
-        uint8_t i=0;
-        for (i=0;i<100;i++) 
-        {
-            __asm__("nop"); /**< Chip select delay (Time CS to First clock) for Orbis comm must be 2.5 us to 10 us. */
-        } 
-
+        //uint8_t i=0;
+        //for (i=0;i<100;i++) 
+        //{
+        //    __asm__("nop"); /**< Chip select delay (Time CS to First clock) for Orbis comm must be 2.5 us to 10 us. */
+        //} 
+        
         HAL_SPI_TransmitReceive_DMA(hw_config_.spi, (uint8_t*)orb_spi_dma_tx_, (uint8_t*)orb_spi_dma_rx_, 2);
     }
     return true;
@@ -414,7 +414,7 @@ void Encoder::abs_spi_cb(){
         } break;
 
         case MODE_SPI_ABS_CUI: {
-            uint16_t rawVal = orb_spi_dma_rx_[1];
+            uint16_t rawVal = abs_spi_dma_rx_[0];
             // check if parity is correct
             if (cui_parity(rawVal)) {
                 return;
@@ -432,8 +432,6 @@ void Encoder::abs_spi_cb(){
            return;
         } break;
     }
-    uint16_t rawVal = orb_spi_dma_rx_[1];
-    pos = (rawVal>>2) & 0x3fff;  /** This is hardcoded for 14bit ST position parsing TODO: Add encoder resolution setting for parser*/
     pos_abs_ = pos;
     abs_spi_pos_updated_ = true;
     if (config_.pre_calibrated) {
@@ -499,7 +497,8 @@ bool Encoder::update() {
         
         case MODE_SPI_ABS_AMS:
         case MODE_SPI_ABS_CUI: 
-        case MODE_SPI_ABS_AEAT: {
+        case MODE_SPI_ABS_AEAT:
+        case MODE_SPI_ABS_ORB: {
             if (abs_spi_pos_updated_ == false) {
                 // Low pass filter the error
                 spi_error_rate_ += current_meas_period * (1.0f - spi_error_rate_);
@@ -517,18 +516,8 @@ bool Encoder::update() {
                 delta_enc -= config_.cpr;
             }
 
-        }break;
-        case MODE_SPI_ABS_ORB: 
-        {
-            abs_spi_pos_updated_ = false;
-            delta_enc = pos_abs_ - count_in_cpr_;
-            delta_enc = mod(delta_enc, config_.cpr);
-            if (delta_enc > config_.cpr/2) 
-            {
-                delta_enc -= config_.cpr;
-            }  
-        }break;
-
+        } break;
+        
         default: {
            set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
            return false;
