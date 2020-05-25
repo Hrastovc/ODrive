@@ -515,8 +515,7 @@ void pwm_trig_adc_cb(ADC_HandleTypeDef* hadc, bool injected) {
         // Also see comment on sync_timers.
         if((current_meas_not_DC_CAL && !axis_num) ||
                 (axis_num && !current_meas_not_DC_CAL)){
-            //axis.encoder_.abs_spi_start_transaction();
-            axis.encoder_.orb_spi_start_transaction(); /** This is now set for Orbis communication TODO: Change so it is set with encoder mode */
+            axis.encoder_.abs_spi_start_transaction();
         }
     }
 
@@ -805,10 +804,8 @@ void start_analog_thread() {
 
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
 {
-    if(hspi->pRxBuffPtr == (uint8_t*)axes[0]->encoder_.orb_spi_dma_rx_)
-    //if(hspi->pRxBuffPtr == (uint8_t*)axes[0]->encoder_.abs_spi_dma_rx_)
+    if(hspi->pRxBuffPtr == (uint8_t*)axes[0]->encoder_.abs_spi_dma_rx_)
         axes[0]->encoder_.abs_spi_cb();
-    else if (hspi->pRxBuffPtr == (uint8_t*)axes[1]->encoder_.orb_spi_dma_rx_)
-    //else if (hspi->pRxBuffPtr == (uint8_t*)axes[1]->encoder_.abs_spi_dma_rx_)
+    else if (hspi->pRxBuffPtr == (uint8_t*)axes[1]->encoder_.abs_spi_dma_rx_)
         axes[1]->encoder_.abs_spi_cb();
 }

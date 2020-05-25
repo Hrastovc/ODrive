@@ -354,29 +354,25 @@ bool Encoder::abs_spi_start_transaction(){
             return false;
         }
         HAL_GPIO_WritePin(abs_spi_cs_port_, abs_spi_cs_pin_, GPIO_PIN_RESET);
-        HAL_SPI_TransmitReceive_DMA(hw_config_.spi, (uint8_t*)abs_spi_dma_tx_, (uint8_t*)abs_spi_dma_rx_, 1);
-    }
-    return true;
-}
+        
+        switch (mode_) {
+            case MODE_SPI_ABS_AMS:
+            case MODE_SPI_ABS_CUI: {
+                abs_spi_dma_tx_[0] = 0xFFFF;
+                HAL_SPI_TransmitReceive_DMA(hw_config_.spi, (uint8_t*)abs_spi_dma_tx_, (uint8_t*)abs_spi_dma_rx_, 1);
+            } break;
 
-bool Encoder::orb_spi_start_transaction(){
-    if (mode_ & MODE_FLAG_ABS){
-        axis_->motor_.log_timing(Motor::TIMING_LOG_SPI_START);
-        if(hw_config_.spi->State != HAL_SPI_STATE_READY){
-            set_error(ERROR_ABS_SPI_NOT_READY);
-            return false;
+            case MODE_SPI_ABS_ORB: {
+                abs_spi_dma_tx_[0] = 0x0000;
+                abs_spi_dma_tx_[1] = 0x0000;
+                HAL_SPI_TransmitReceive_DMA(hw_config_.spi, (uint8_t*)abs_spi_dma_tx_, (uint8_t*)abs_spi_dma_rx_, 2);
+            } break;
+
+            default: {
+                set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
+                return false;
+            } break;
         }
-        HAL_GPIO_WritePin(abs_spi_cs_port_, abs_spi_cs_pin_, GPIO_PIN_RESET);
-        
-        /** TODO: Implement delay_us*/
-        
-        //uint8_t i=0;
-        //for (i=0;i<100;i++) 
-        //{
-        //    __asm__("nop"); /**< Chip select delay (Time CS to First clock) for Orbis comm must be 2.5 us to 10 us. */
-        //} 
-        
-        HAL_SPI_TransmitReceive_DMA(hw_config_.spi, (uint8_t*)orb_spi_dma_tx_, (uint8_t*)orb_spi_dma_rx_, 2);
     }
     return true;
 }
@@ -423,8 +419,11 @@ void Encoder::abs_spi_cb(){
         } break;
 
         case MODE_SPI_ABS_ORB: {
-            uint16_t rawVal = orb_spi_dma_rx_[1];
-            pos = (rawVal>>2) & 0x3fff;  /** This is hardcoded for 14bit ST position parsing TODO: Add encoder resolution setting for parser*/
+            uint16_t rawVal = abs_spi_dma_rx_[1];
+            // check if parity is correct
+            //TODO: parity check
+            // This is hardcoded for 14bit ST position parsing, TODO: Add encoder resolution setting for parser
+            pos = (rawVal >> 2) & 0x3fff;
         } break;
 
         default: {
@@ -516,8 +515,8 @@ bool Encoder::update() {
                 delta_enc -= config_.cpr;
             }
 
-        } break;
-        
+        }break;
+
         default: {
            set_error(ERROR_UNSUPPORTED_ENCODER_MODE);
            return false;
